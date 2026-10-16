@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+<title>Line Planner</title>
+<style>
+:root{
+  --ink:#16202f; --ink-2:#3c4a60; --muted:#66738a; --rule:#d7dfe9; --paper:#f3f6fa; --card:#ffffff;
+  --accent:#1f5e99; --accent-ink:#ffffff; --accent-soft:#e4eef8;
+  --trip:#1f5e99; --trip-ink:#ffffff; --turn:#cde2f5; --turn-ink:#12405f;
+  --must:#e2550a; --must-ink:#ffffff; --must-soft:#ffe4d3;
+  --nice:#f1bf47; --nice-ink:#3a2a00; --nice-soft:#fff2cc;
+  --set:#a7b0bb; --set-ink:#16202f; --res:#d9e7f6; --res-ink:#123e63;
+  --we:#edf1f6; --good:#2c7a44; --bad:#b42318; --spill:#d9820f; --hol:#7a4fd1;
+  --ui:"Avenir Next","Avenir","Segoe UI Variable Text","Segoe UI","Roboto",system-ui,-apple-system,sans-serif;
+  --data:"Avenir Next Condensed","Bahnschrift SemiCondensed","Roboto Condensed","Arial Narrow","Avenir Next","Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#e6ecf5; --ink-2:#bac6d7; --muted:#8d9ab0; --rule:#2b374a; --paper:#0d1421; --card:#141e2f;
+    --accent:#6fa9e6; --accent-ink:#0d1421; --accent-soft:#1a2b43;
+    --trip:#3d7ec0; --trip-ink:#ffffff; --turn:#22405f; --turn-ink:#d5e7f9;
+    --must:#f0772f; --must-ink:#1b0d04; --must-soft:#3b2416; --nice:#e6b73e; --nice-ink:#221800; --nice-soft:#33290e;
+    --set:#5c6777; --set-ink:#eef2f7; --res:#1c3250; --res-ink:#cfe1f6; --we:#172234; --good:#5cb57a; --bad:#f06e66;
+    --spill:#f0a43c; --hol:#b394f5;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.45}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:calc(8px + env(safe-area-inset-top,0px)) 16px 8px;background:var(--card);border-bottom:1px solid var(--rule)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:17px;letter-spacing:.01em}
+.mk{display:inline-grid;grid-template-columns:repeat(3,7px);gap:2px}
+.mk i{display:block;height:14px;border-radius:2px;background:var(--trip)}
+.mk i:nth-child(2){background:var(--must)}.mk i:nth-child(3){background:var(--nice)}
+.topnav{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+main{max-width:760px;margin:0 auto;padding:18px 16px 48px}
+body[data-step="s-res"] main{max-width:1400px}
+body[data-step="s-ask"] main{padding-bottom:120px}
+h1{font-size:28px;line-height:1.15;margin:6px 0 8px;letter-spacing:-.01em}
+h2{font-size:20px;margin:26px 0 8px}
+.lead{font-size:17px;color:var(--ink-2);margin:0 0 12px}
+.help{margin:0 0 10px;color:var(--muted);font-size:14.5px}
+.note{background:var(--nice-soft);border-left:4px solid var(--nice);padding:10px 12px;border-radius:6px;margin:10px 0}
+.msg{min-height:1.4em;margin:12px 0 0;font-weight:600}
+.msg.bad{color:var(--bad)}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:12px 18px;font-weight:650;min-height:46px}
+.primary:disabled{opacity:.45;cursor:default}
+.ghost{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:10px 14px;min-height:44px}
+.link{background:none;border:0;color:var(--accent);padding:6px 2px;text-decoration:underline;text-underline-offset:3px;min-height:36px;font-size:15px}
+.small{font-size:14px;padding:7px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--card);min-height:38px}
+.wide-btn{width:100%;margin-top:14px}
+input,select{font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--card);color:var(--ink);min-height:42px}
+input[type=number]{width:5.4em}
+.flabel{display:block;font-weight:600;margin:6px 0 6px}
+.pw{display:flex;gap:8px}.pw input{flex:1;min-width:0;letter-spacing:.02em}
+.check{display:inline-flex;align-items:center;gap:9px;margin:12px 14px 0 0;font-size:15.5px}
+.check input{width:20px;height:20px;min-height:0;margin:0}
+.hero{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;max-width:250px;margin:6px 0 20px}
+.hc{display:block;aspect-ratio:1.5/1;border-radius:4px;background:var(--we)}
+.hc.ht{background:var(--trip)}.hc.hm{background:var(--must)}.hc.hn{background:var(--nice)}.hc.hr{background:var(--res)}
+.choices{display:grid;gap:12px;margin:18px 0}
+.choice{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;background:var(--card);border:1px solid var(--rule);
+  border-radius:14px;padding:16px 18px;min-height:74px}
+.choice:hover{border-color:var(--accent)}
+.choice b{font-size:20px}
+.choice span{color:var(--muted);font-size:15px}
+.choice .code{font-family:var(--data);font-size:36px;line-height:1;letter-spacing:.05em}
+.ask-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.q{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:16px;margin:14px 0}
+.q h2{margin:0 0 4px;font-size:19px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:8px 0}
+.sub{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:12px}
+.lbl{font-size:15px;color:var(--ink-2);min-width:84px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:transparent;padding:8px 12px;min-height:40px;font-size:15px}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.k{display:inline-block;padding:0 6px;border-radius:5px;font-weight:600}
+.k.must{background:var(--must);color:var(--must-ink)}.k.nice{background:var(--nice);color:var(--nice-ink)}
+.k.like{background:var(--good);color:#fff}.k.avoid{background:var(--bad);color:#fff}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:10px 0}
+.cal-h{font-size:12.5px;color:var(--muted);text-align:center}
+.day{position:relative;min-height:46px;aspect-ratio:1/1;border:1px solid var(--rule);border-radius:10px;background:var(--card);padding:0;
+  display:flex;align-items:center;justify-content:center;font-family:var(--data);font-size:19px;font-variant-numeric:tabular-nums}
+.day.we{background:var(--we)}
+.day .mo{position:absolute;top:3px;left:5px;font-family:var(--ui);font-size:10.5px;color:var(--muted)}
+.day.hol::after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--hol)}
+.day[data-s="1"]{background:var(--must);border-color:var(--must);color:var(--must-ink);font-weight:700}
+.day[data-s="2"]{background:var(--nice);border-color:var(--nice);color:var(--nice-ink);font-weight:700}
+.day[data-s="1"] .mo,.day[data-s="2"] .mo{color:inherit;opacity:.85}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{font-family:var(--data);font-size:15.5px;letter-spacing:.04em;border:1px solid var(--rule);background:var(--card);border-radius:999px;
+  padding:6px 11px;min-height:36px}
+.chip[data-s="1"]{background:var(--good);border-color:var(--good);color:#fff}
+.chip[data-s="2"]{background:var(--bad);border-color:var(--bad);color:#fff;text-decoration:line-through}
+.checks{display:flex;flex-wrap:wrap}
+.arow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--rule)}
+.arow:first-of-type{border-top:0}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid var(--rule);
+  box-shadow:0 -6px 18px rgba(10,20,40,.08)}
+#count{font-weight:650;font-size:15.5px}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}
+.tools .check{margin:0 0 0 6px;font-size:14.5px}
+.answers{font-size:14.5px;color:var(--ink-2);background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin:8px 0}
+.closeinfo{font-size:14.5px;color:var(--ink-2);margin:0}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse}
+.order{width:100%;font-size:14.5px}
+.order th{text-align:left;font-size:12.5px;color:var(--muted);font-weight:650;border-bottom:2px solid var(--ink);padding:6px 8px;white-space:nowrap}
+.order td{padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+.order .c-l{font-family:var(--data);font-weight:700;font-size:17px}
+.order .c-n{color:var(--muted);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.order td.tr{color:var(--must);font-weight:700}.order td.ok0{color:var(--good);font-weight:700}
+.why span{display:inline-block;margin:0 10px 2px 0}
+.ok{color:var(--good)}.bad{color:var(--bad);font-weight:600}.miss{color:var(--muted)}.fl{color:var(--ink-2)}
+.sep td{background:var(--we);font-weight:600;color:var(--ink-2);font-size:13.5px}
+.grid{font-family:var(--data);font-size:12px;font-variant-numeric:tabular-nums;table-layout:fixed;width:100%;min-width:1000px}
+.grid th{font-weight:600;color:var(--ink-2);padding:2px 0;text-align:center;border-bottom:2px solid var(--ink);line-height:1.15}
+.grid th .mo{display:block;font-size:10px;color:var(--accent);height:12px}
+.grid th .dn{display:block;font-size:13px;color:var(--ink)}
+.grid th .dw{display:block;font-size:10px;color:var(--muted)}
+.grid th.hol .dn{text-decoration:underline;text-decoration-color:var(--hol);text-decoration-thickness:2px;text-underline-offset:2px}
+.grid td{height:31px;padding:0;border-bottom:1px solid var(--rule);text-align:center;position:relative}
+.grid .c-n{width:30px;color:var(--muted)}.grid .c-l{width:46px;font-weight:700;font-size:14px}.grid .c-i{width:50px}
+.grid .we{background:var(--we)}
+.grid .cm{background:var(--must-soft)}.grid .cn{background:var(--nice-soft)}
+.grid th.cm{box-shadow:inset 0 3px 0 var(--must)}.grid th.cn{box-shadow:inset 0 3px 0 var(--nice)}
+.cb{display:flex;flex-direction:column;align-items:center;justify-content:center;height:25px;margin:0 1px;border-radius:5px;line-height:1.05;overflow:hidden}
+.grid td.trip .cb{background:var(--trip);color:var(--trip-ink);margin:0;border-radius:0}
+.grid td.trip.start .cb{margin-left:2px;border-radius:6px 0 0 6px}
+.grid td.trip.end .cb{margin-right:2px;border-radius:0 6px 6px 0}
+.grid td.trip.one .cb{margin:0 2px;border-radius:6px}
+.grid td.trip.more::after{content:"";position:absolute;right:-1px;top:50%;margin-top:-6px;border-left:7px solid var(--spill);
+  border-top:6px solid transparent;border-bottom:6px solid transparent}
+.grid td.turn .cb{background:var(--turn);color:var(--turn-ink)}
+.grid td.spill .cb{border:1.5px dashed var(--spill);color:var(--ink-2)}
+.grid td.spillin::before{content:"";position:absolute;top:3px;left:2px;z-index:1;border-top:8px solid var(--spill);border-right:8px solid transparent}
+.lab{font-weight:700;font-size:11.5px;letter-spacing:.03em}
+.tm{font-size:9.5px;opacity:.92}
+.grid td.r .cb{background:var(--res);color:var(--res-ink)}
+.grid td.rt .cb{background:var(--must);color:var(--must-ink)}
+.grid td.set .cb{background:var(--set);color:var(--set-ink)}
+.grid td.set .lab{font-size:9.5px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink-2);margin:10px 0 4px}
+.li{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:18px;height:12px;border-radius:3px;border:1px solid var(--rule)}
+.sw.trip{background:var(--trip);border-color:var(--trip)}.sw.turn{background:var(--turn)}.sw.spill{border:1.5px dashed var(--spill)}
+.sw.cm{background:var(--must-soft);box-shadow:inset 0 3px 0 var(--must)}.sw.cn{background:var(--nice-soft);box-shadow:inset 0 3px 0 var(--nice)}
+.sw.we{background:var(--we)}.sw.r{background:var(--res)}.sw.rt{background:var(--must)}.sw.set{background:var(--set)}.sw.off{background:var(--card)}
+.sw.hol{border:0;border-bottom:2px solid var(--hol);border-radius:0;height:10px}
+.det{border:1px solid var(--rule);border-radius:12px;background:var(--card);margin:8px 0;padding:0 12px}
+.det summary{cursor:pointer;padding:12px 0;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.det summary b{font-family:var(--data);font-size:17px}
+.det .meta{color:var(--muted);font-size:14px}
+.flags{margin:0 0 8px;color:var(--ink-2);font-size:14px}
+.ptab{width:100%;font-size:13.5px;margin-bottom:12px}
+.ptab th{text-align:left;color:var(--muted);font-weight:650;font-size:12px;border-bottom:1.5px solid var(--ink);padding:4px 6px;white-space:nowrap}
+.ptab td{padding:5px 6px;border-bottom:1px solid var(--rule);vertical-align:top}
+.notes p{margin:0 0 8px;color:var(--ink-2);font-size:14.5px;max-width:80ch}
+.foot{color:var(--muted);font-size:13px;margin-top:24px}
+.topnav .link{white-space:nowrap}
+@media (max-width:520px){#topMeta{display:none}.top{padding-left:12px;padding-right:12px}.brand{font-size:16px}}
+.grid .c-n,.grid .c-l,.grid .c-i{position:sticky;background:var(--card);z-index:2}
+.grid .c-n{left:0}.grid .c-l{left:30px}.grid .c-i{left:76px;box-shadow:inset -1px 0 0 var(--rule)}
+.order td{white-space:nowrap}.order td.why{white-space:normal;min-width:230px}
+@media (min-width:640px){.choices{grid-template-columns:1fr 1fr}}
+@media print{
+  :root{--ink:#16202f;--ink-2:#3c4a60;--muted:#66738a;--rule:#cfd8e3;--paper:#fff;--card:#fff;--accent:#1f5e99;--accent-ink:#fff;
+    --accent-soft:#eef4fb;--trip:#1f5e99;--trip-ink:#fff;--turn:#cde2f5;--turn-ink:#12405f;--must:#e2550a;--must-ink:#fff;
+    --must-soft:#ffe4d3;--nice:#f1bf47;--nice-ink:#3a2a00;--nice-soft:#fff2cc;--set:#a7b0bb;--set-ink:#16202f;--res:#d9e7f6;
+    --res-ink:#123e63;--we:#f0f3f7;--good:#2c7a44;--bad:#b42318;--spill:#d9820f;--hol:#7a4fd1;color-scheme:light}
+  @page{size:letter landscape;margin:.35in}
+  body{background:#fff;font-size:9.5pt}
+  .top,.bar,.tools,.noprint{display:none !important}
+  main,body[data-step="s-res"] main{max-width:none;padding:0}
+  .scroll{overflow:visible}
+  h1{font-size:16pt;margin:0 0 4pt}h2{font-size:12pt;margin:10pt 0 4pt;break-after:avoid}
+  .lead,.answers,.closeinfo{font-size:9pt}.answers{padding:4pt 6pt}
+  .order{font-size:8pt}.order th,.order td{padding:1.6pt 4pt}.order .c-l{font-size:9.5pt}
+  .grid{min-width:0;font-size:7pt}.grid td{height:16pt}.cb{height:13.5pt}.lab{font-size:6.6pt}.tm{font-size:5.4pt}
+  .grid th .dn{font-size:7pt}.grid th .dw,.grid th .mo{font-size:5.4pt;height:auto}
+  .grid .c-n{width:16pt}.grid .c-l{width:24pt;font-size:8pt}.grid .c-i{width:27pt}
+  .grid .c-n,.grid .c-l,.grid .c-i{position:static}
+  tr{break-inside:avoid}.pb{break-before:page}
+  .det{break-inside:avoid;border:0;border-top:1px solid #cfd8e3;border-radius:0;padding:0;margin:0}
+  .det summary{padding:3pt 0;list-style:none}.det summary::-webkit-details-marker{display:none}
+  .det .meta,.flags{font-size:8pt}.ptab{font-size:7.4pt;margin-bottom:4pt}.ptab td,.ptab th{padding:1.4pt 4pt}
+  body.nodet .dh,body.nodet .dets{display:none}
+  .legend{font-size:7.5pt}.notes p{font-size:8.5pt}.foot{font-size:7.5pt}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto !important}}
+</style>
+</head>
+<body data-step="s-load">
+<header class="top">
+  <div class="brand"><span class="mk" aria-hidden="true"><i></i><i></i><i></i></span>Line Planner</div>
+  <nav class="topnav">
+    <span id="topMeta"></span>
+    <button type="button" class="link" id="btnStart" hidden>Start over</button>
+    <button type="button" class="link" id="btnForget" hidden>Forget this device</button>
+  </nav>
+</header>
+<main>
+  <section id="s-load"><p class="lead">Loading…</p><noscript><p>This site needs JavaScript.</p></noscript></section>
+
+  <section id="s-lock" hidden>
+    <div class="hero" id="hero" aria-hidden="true"></div>
+    <h1>Enter the access code</h1>
+    <p class="lead">This month’s lines are locked. The code opens them on this device.</p>
+    <form id="lockForm" autocomplete="off" novalidate>
+      <label for="code" class="flabel">Access code</label>
+      <div class="pw">
+        <input id="code" name="code" type="password" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="four words">
+        <button type="button" class="ghost" id="btnShow">Show</button>
+      </div>
+      <label class="check"><input type="checkbox" id="remember" checked> Remember on this device</label>
+      <p class="help">Leave this off on a shared computer.</p>
+      <button class="primary wide-btn" id="btnUnlock" type="submit">Unlock</button>
+      <p class="msg" id="lockMsg" role="alert" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section id="s-base" hidden>
+    <h1>Choose your base</h1>
+    <p class="lead" id="monthLine"></p>
+    <p class="note" id="closedNote" hidden></p>
+    <div class="choices" id="baseChoices"></div>
+  </section>
+
+  <section id="s-kind" hidden>
+    <h1>Do you want reserve lines?</h1>
+    <p class="lead" id="kindLine"></p>
+    <div class="choices">
+      <button type="button" class="choice" data-kind="lines"><b>No, regular lines</b><span>Pre-built trips and turns</span></button>
+      <button type="button" class="choice" data-kind="reserve"><b>Yes, reserve lines</b><span>Reserve days and days off</span></button>
+    </div>
+    <button type="button" class="link" data-go="s-base">Back to bases</button>
+  </section>
+
+  <section id="s-ask" hidden>
+    <div class="ask-head"><h1 id="askTitle"></h1><button type="button" class="link" data-go="s-kind">Back</button></div>
+    <p class="lead">Answer what matters to you and skip the rest. A <b>must</b> removes the lines that miss it. A <b>nice to have</b> only moves lines up the list.</p>
+    <div id="askBody"></div>
+  </section>
+
+  <section id="s-res" hidden><div id="resBody"></div></section>
+</main>
+<div class="bar" id="askBar" hidden><span id="count" aria-live="polite"></span><button type="button" class="primary" id="btnShowLines">Show my lines</button></div>
+
+<script>
+'use strict';
+(() => {
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    const v = attrs[k];
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : String(v));
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    e.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return e;
+}
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const hm = s => { const [a, b] = s.split(':').map(Number); return a * 60 + b; };
+const clockStr = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+const durStr = m => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+const S = { data: null, days: [], base: null, B: null, kind: null, A: null, D: null, key: null, month: null, saved: false, last: null, list: [] };
+
+// ------------------------------------------------------------ dates
+const dObj = i => S.days[i];
+const dlab = i => MON[dObj(i).getUTCMonth()] + ' ' + dObj(i).getUTCDate();
+const dlabW = i => WD[dObj(i).getUTCDay()] + ' ' + dlab(i);
+const isWE = i => { const w = dObj(i).getUTCDay(); return w === 0 || w === 6; };
+function dayList(arr) {
+  const a = [...arr].sort((x, y) => x - y);
+  if (!a.length) return '';
+  const groups = [[a[0]]];
+  for (const i of a.slice(1)) { const g = groups[groups.length - 1]; if (i === g[g.length - 1] + 1) g.push(i); else groups.push([i]); }
+  let prevM = -1;
+  return groups.map(g => {
+    const d0 = dObj(g[0]), d1 = dObj(g[g.length - 1]), m0 = d0.getUTCMonth(), m1 = d1.getUTCMonth();
+    const pre = m0 !== prevM ? MON[m0] + ' ' : '';
+    const end = (m1 !== m0 ? MON[m1] + ' ' : '') + d1.getUTCDate();
+    prevM = m1;
+    if (g.length >= 3) return pre + d0.getUTCDate() + '–' + end;
+    if (g.length === 2) return pre + d0.getUTCDate() + ', ' + end;
+    return pre + d0.getUTCDate();
+  }).join(', ');
+}
+const idx = v => S.A.days.reduce((a, x, i) => { if (x === v) a.push(i); return a; }, []);
+
+// ------------------------------------------------------------ storage + crypto (all inside the browser)
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const norm = s => s.trim().toLowerCase().replace(/\s+/g, ' ');
+async function getJSON(name) {
+  const r = await fetch(name + '?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error(name + ' ' + r.status);
+  return r.json();
+}
+async function unlockKey(code, K) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(norm(code)), 'PBKDF2', false, ['deriveKey']);
+  const kek = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: K.kdf.hash, salt: b64d(K.kdf.salt), iterations: K.kdf.iter },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const pkcs8 = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(K.iv) }, kek, b64d(K.key));
+  return crypto.subtle.importKey('pkcs8', pkcs8, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt']);
+}
+async function openMonth(priv, M) {
+  const raw = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, priv, b64d(M.ek));
+  const dk = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+  const gz = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(M.iv) }, dk, b64d(M.ct));
+  const txt = await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  return JSON.parse(txt);
+}
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('line-planner', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('k');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet(k) { const db = await idb(); return new Promise((res, rej) => { const q = db.transaction('k', 'readonly').objectStore('k').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+async function idbSet(k, v) { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction('k', 'readwrite'); t.objectStore('k').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+async function idbDel(k) { const db = await idb(); return new Promise(res => { const t = db.transaction('k', 'readwrite'); t.objectStore('k').delete(k); t.oncomplete = () => res(); t.onerror = () => res(); }); }
+
+// ------------------------------------------------------------ start
+function lockMsg(t, bad) { const m = $('#lockMsg'); m.textContent = t; m.className = 'msg' + (bad ? ' bad' : ''); }
+function fatal(t) { show('s-lock'); lockMsg(t, true); $('#code').disabled = true; $('#btnUnlock').disabled = true; }
+function hero() {
+  const el = $('#hero'); if (el.childElementCount) return;
+  const pat = ['.....tt', 'tt..mm.', '.n..rrr', 'r...ttt', 't.nn...'];
+  for (const row of pat) for (const c of row) el.append(h('i', { class: 'hc ' + ({ t: 'ht', m: 'hm', n: 'hn', r: 'hr' }[c] || '') }));
+}
+async function boot() {
+  hero();
+  if (!window.crypto || !crypto.subtle || typeof DecompressionStream === 'undefined' || !('indexedDB' in window)) {
+    return fatal('This browser can’t open the site. Update the phone, or use a current Safari or Chrome.');
+  }
+  try { S.key = await getJSON('key.json'); } catch (e) { return fatal('The site isn’t set up yet: key.json is missing.'); }
+  try { S.month = await getJSON('month.json'); } catch (e) { return fatal('There is no month file yet: month.json is missing.'); }
+  if (S.month.kid !== S.key.kid) return fatal('The month file doesn’t match this site’s key. A new month file is needed.');
+  try {
+    const saved = await idbGet('key');
+    if (saved && saved.kid === S.key.kid) { S.saved = true; return ready(await openMonth(saved.priv, S.month)); }
+    if (saved) await idbDel('key');
+  } catch (e) { S.saved = false; try { await idbDel('key'); } catch (_) {} }
+  show('s-lock');
+  setTimeout(() => $('#code').focus(), 60);
+}
+$('#btnShow').addEventListener('click', () => { const i = $('#code'); const hid = i.type === 'password'; i.type = hid ? 'text' : 'password'; $('#btnShow').textContent = hid ? 'Hide' : 'Show'; });
+$('#lockForm').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const code = $('#code').value, btn = $('#btnUnlock');
+  if (norm(code).length < 4) return lockMsg('Type the access code.', true);
+  btn.disabled = true; lockMsg('Opening…');
+  let priv;
+  try { priv = await unlockKey(code, S.key); }
+  catch (e) { btn.disabled = false; return lockMsg('That code didn’t work. Check the words and the spaces, then try again.', true); }
+  try {
+    const d = await openMonth(priv, S.month);
+    if ($('#remember').checked) { try { await idbSet('key', { kid: S.key.kid, priv }); S.saved = true; } catch (e) { S.saved = false; } }
+    $('#code').value = ''; lockMsg('');
+    ready(d);
+  } catch (e) { lockMsg('The code is right, but the month file can’t be opened. A new month file is needed.', true); }
+  btn.disabled = false;
+});
+$('#btnForget').addEventListener('click', async () => { try { await idbDel('key'); } catch (e) {} location.reload(); });
+$('#btnStart').addEventListener('click', () => show('s-base'));
+$$('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+$$('#s-kind [data-kind]').forEach(b => b.addEventListener('click', () => pickKind(b.dataset.kind)));
+$('#btnShowLines').addEventListener('click', () => { renderResults(); });
+
+function show(id) {
+  for (const s of $$('main > section')) s.hidden = s.id !== id;
+  $('#askBar').hidden = id !== 's-ask';
+  document.body.dataset.step = id;
+  $('#btnStart').hidden = !['s-kind', 's-ask', 's-res'].includes(id);
+  $('#btnForget').hidden = !S.saved || id === 's-lock';
+  $('#topMeta').textContent = S.data ? S.data.label + (S.base && id !== 's-base' ? ', ' + S.base : '') : '';
+  window.scrollTo(0, 0);
+}
+function ready(d) {
+  S.data = d;
+  const [y, m, dd] = d.start.split('-').map(Number);
+  S.days = Array.from({ length: d.n }, (_, i) => new Date(Date.UTC(y, m - 1, dd + i)));
+  $('#monthLine').textContent = `${d.label} bid period: ${dlabW(0)} to ${dlabW(d.n - 1)}.`;
+  const box = $('#baseChoices'); box.textContent = '';
+  let open = 0;
+  for (const code of Object.keys(d.bases)) {
+    const B = d.bases[code], closed = Date.now() > Date.parse(B.close);
+    if (!closed) open++;
+    box.append(h('button', { type: 'button', class: 'choice', 'data-base': code, onclick: () => pickBase(code) },
+      h('b', { class: 'code', text: code }),
+      h('span', { text: `${B.lines.length} regular lines, ${B.reserve.length} reserve lines` }),
+      h('span', { text: (closed ? 'Bid closed ' : 'Bid closes ') + B.closeText + ' ' + code + ' time' })));
+  }
+  const note = $('#closedNote'); note.hidden = open > 0;
+  note.textContent = 'This month’s bid has closed. You can still use the site to practice.';
+  show('s-base');
+}
+function pickBase(code) {
+  S.base = code; S.B = prepBase(code);
+  $('#kindLine').textContent = `${code}, ${S.data.label}.`;
+  show('s-kind');
+}
+function pickKind(k) {
+  S.kind = k; S.A = defaults(); S.D = defaults();
+  renderAsk(); show('s-ask');
+}
+
+// ------------------------------------------------------------ data prep (once per base)
+function putCell(L, d, c) {
+  const ex = L.cells[d];
+  if (!ex) { L.cells[d] = c; return; }
+  if (c.t === 'spill') { ex.spillIn = c.time; return; }
+  if (ex.t === 'spill') c.spillIn = ex.time;
+  L.cells[d] = c;
+}
+function prepBase(code) {
+  const B = S.data.bases[code];
+  if (B._ready) return B;
+  const n = S.data.n, P = B.pairings, lensSet = new Set(), crews = new Set(), cityN = new Map();
+  for (const L of B.lines) {
+    L.busy = new Uint8Array(n); L.cells = new Array(n).fill(null); L.lay = new Map(); L.lens = new Set(); L.flags = 0; L.intl = new Set();
+    L.rpMin = 1e9; L.relMax = -1; L.homeLate = false; L.first = n; L.carry = L.co > 0;
+    let trips = 0, turns = 0;
+    for (const [id, s] of L.p) {
+      const q = P[id];
+      L.first = Math.min(L.first, s); L.flags |= q.f; q.ix.forEach(x => L.intl.add(x));
+      L.rpMin = Math.min(L.rpMin, hm(q.rp));
+      if (q.f & 2) L.homeLate = true; else L.relMax = Math.max(L.relMax, hm(q.rl));
+      if (q.k) { trips++; L.lens.add(q.dd); lensSet.add(q.dd); for (const [c] of q.ly) L.lay.set(c, (L.lay.get(c) || 0) + 1); } else turns++;
+      for (let k = 0; k < q.sp; k++) {
+        const d = s + k;
+        if (d >= n) { L.carry = true; if (L.cells[n - 1] && L.cells[n - 1].t === 'trip') L.cells[n - 1].more = true; break; }
+        L.busy[d] = 1;
+        let cell;
+        if (!q.k) cell = k === 0 ? { t: 'turn', lab: q.ds, id: q.id } : { t: 'spill', time: q.rl };
+        else cell = { t: 'trip', lab: q.lb[k] === '-' ? '–' : q.lb[k], id: k === 0 ? q.id : null,
+          pos: q.sp === 1 ? 'one' : k === 0 ? 'start' : k === q.sp - 1 ? 'end' : 'mid',
+          time: k === q.sp - 1 && (q.f & 2) ? q.rl : null };
+        putCell(L, d, cell);
+      }
+    }
+    for (const [c, k] of L.lay) cityN.set(c, (cityN.get(c) || 0) + k);
+    L.kind = trips && turns ? 'mix' : trips ? 'trips' : 'turns'; L.nTrips = trips; crews.add(L.c);
+  }
+  B._lens = [...lensSet].sort((a, b) => a - b);
+  B._crews = [...crews].sort((a, b) => a - b);
+  B._cities = [...cityN.keys()].sort();
+  B._offMax = B.lines.length ? Math.max(...B.lines.map(l => l.off)) : 0;
+  for (const R of B.reserve) {
+    R.offA = new Uint8Array(n); R.off.forEach(i => { R.offA[i] = 1; });
+    R.setA = new Uint8Array(n); R.set.forEach(i => { R.setA[i] = 1; });
+  }
+  B._ready = true;
+  return B;
+}
+function defaults() {
+  const B = S.B, crs = B.lines.map(l => l.cr), offs = B.lines.map(l => l.off);
+  return {
+    days: new Array(S.data.n).fill(0), first: -1, firstMode: 'must', type: 'both', put: 'none',
+    lens: new Set(B._lens), lensMode: 'must',
+    crMin: crs.length ? Math.floor(Math.min(...crs) / 60) : 0, crMax: crs.length ? Math.ceil(Math.max(...crs) / 60) : 200, crMode: 'must',
+    offMin: offs.length ? Math.min(...offs) : 0, offMode: 'must',
+    cities: new Map(), avoidMode: 'must', rep: -1, repMode: 'nice', home: -1, homeMode: 'nice',
+    avoid: { redeye: 0, late: 0, intl: 0, dh: 0 }, crew: 0, addRest: false, maxTrades: 99,
+  };
+}
+function crewText(c) {
+  const t = (S.B.comp || {})[String(c)];
+  if (c === 1) return '1 FA';
+  return t ? `${c} crew (${t.replace(/(\d)-PUR/g, '$1 Purser').replace(/(\d)-FA/g, '$1 FA').replace(/,\s*/g, ' + ')})` : `${c} crew`;
+}
+
+// ------------------------------------------------------------ questions
+function sec(title, help, ...kids) {
+  return h('section', { class: 'q' }, h('h2', { text: title }), help ? h('p', { class: 'help', text: help }) : null, ...kids);
+}
+function seg(opts, cur, onSet, label, id) {
+  const g = h('div', { class: 'seg', role: 'group', 'aria-label': label || '', id: id || null });
+  for (const [v, t] of opts) {
+    const b = h('button', { type: 'button', 'aria-pressed': String(v === cur), 'data-v': String(v), text: t });
+    b.addEventListener('click', () => { $$('button', g).forEach(x => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); onSet(v); });
+    g.append(b);
+  }
+  return g;
+}
+const mustNice = field => seg([['must', 'Must'], ['nice', 'Nice to have']], S.A[field], v => { S.A[field] = v; update(); }, 'How important');
+function renderAsk() {
+  const body = $('#askBody'); body.textContent = '';
+  $('#askTitle').textContent = `${S.base} ${S.kind === 'lines' ? 'regular' : 'reserve'} lines`;
+  if (S.kind === 'reserve' && !S.B.reserve.length) { body.append(h('p', { class: 'note', text: 'There are no reserve lines for this base this month.' })); return; }
+  if (S.kind === 'lines' && !S.B.lines.length) { body.append(h('p', { class: 'note', text: 'There are no regular lines for this base this month.' })); return; }
+  body.append(qDays());
+  if (S.kind === 'lines') {
+    body.append(qFirst(), qType(), qPay(), qCities(), qTimes(), qAvoid());
+    if (S.B._crews.length > 1) body.append(qCrew());
+  } else body.append(qTrades());
+  body.append(qList());
+  update();
+}
+function paintDay(b, i) {
+  const v = S.A.days[i];
+  b.dataset.s = v;
+  b.setAttribute('aria-pressed', v ? 'true' : 'false');
+  b.setAttribute('aria-label', dlabW(i) + (v === 1 ? ', must be off' : v === 2 ? ', nice to have off' : '') + (S.B.holidays.includes(i) ? ', holiday' : ''));
+}
+function qDays() {
+  const A = S.A, n = S.data.n, grid = h('div', { class: 'cal' }), btns = [];
+  ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(t => grid.append(h('div', { class: 'cal-h', text: t })));
+  const lead = (dObj(0).getUTCDay() + 6) % 7;
+  for (let i = 0; i < lead; i++) grid.append(h('div'));
+  for (let i = 0; i < n; i++) {
+    const d = dObj(i);
+    const b = h('button', { type: 'button', class: 'day' + (isWE(i) ? ' we' : '') + (S.B.holidays.includes(i) ? ' hol' : ''), 'data-i': i },
+      i === 0 || d.getUTCDate() === 1 ? h('span', { class: 'mo', text: MON[d.getUTCMonth()] }) : null, String(d.getUTCDate()));
+    b.addEventListener('click', () => { A.days[i] = (A.days[i] + 1) % 3; paintDay(b, i); update(); });
+    paintDay(b, i); btns.push(b); grid.append(b);
+  }
+  const quick = h('div', { class: 'row-btns' },
+    h('button', { type: 'button', class: 'small', text: 'Weekends nice to have', onclick: () => { for (let i = 0; i < n; i++) if (isWE(i) && !A.days[i]) { A.days[i] = 2; paintDay(btns[i], i); } update(); } }),
+    h('button', { type: 'button', class: 'small', text: 'Clear days', onclick: () => { A.days.fill(0); btns.forEach((b, i) => paintDay(b, i)); update(); } }));
+  const hol = S.B.holidays.length ? ' A purple dot marks a holiday.' : '';
+  return sec('Days off', null,
+    h('p', { class: 'help' }, 'Tap a day once for ', h('span', { class: 'k must', text: 'must be off' }), ', twice for ',
+      h('span', { class: 'k nice', text: 'nice to have off' }), ', three times to clear.' + hol),
+    grid, quick,
+    h('p', { class: 'help', style: 'margin-top:10px', text: S.kind === 'lines'
+      ? 'A day counts as worked if any duty touches it, including a release after midnight.'
+      : 'Reserve lines are ranked by how many days you need to trade to get the must days off.' }));
+}
+function qFirst() {
+  const A = S.A;
+  const sel = h('select', { id: 'qFirst', 'aria-label': 'First work day' }, h('option', { value: '-1', text: 'Any day' }),
+    S.days.map((d, i) => h('option', { value: String(i), text: dlabW(i) })));
+  sel.value = String(A.first);
+  sel.addEventListener('change', () => { A.first = Number(sel.value); update(); });
+  return sec('First work day', 'The day the line’s first trip or turn starts.', h('div', { class: 'row' }, sel, mustNice('firstMode')));
+}
+function qType() {
+  const A = S.A, lens = S.B._lens;
+  const putRow = h('div', { class: 'sub' }, h('span', { class: 'lbl', text: 'Put first' }),
+    seg([['none', 'No preference'], ['trips', 'Trips'], ['turns', 'Turns']], A.put, v => { A.put = v; update(); }, 'Put first', 'qPut'));
+  const lensBox = h('div', { class: 'sub' }, h('span', { class: 'lbl', text: 'Trip lengths' }),
+    h('div', { class: 'checks' }, lens.map(x => {
+      const cb = h('input', { type: 'checkbox' }); cb.checked = A.lens.has(x);
+      cb.addEventListener('change', () => { if (cb.checked) A.lens.add(x); else A.lens.delete(x); update(); });
+      return h('label', { class: 'check' }, cb, x + '-day');
+    })), mustNice('lensMode'));
+  const sync = () => { putRow.hidden = A.type !== 'both'; lensBox.hidden = A.type === 'turns' || !lens.length; };
+  const typeSeg = seg([['both', 'Both'], ['trips', 'Trips only'], ['turns', 'Turns only']], A.type, v => { A.type = v; sync(); update(); }, 'Trips or turns', 'qType');
+  sync();
+  return sec('Trips or turns', 'Trips have layovers. Turns come home the same day.', typeSeg, putRow, lensBox);
+}
+function qPay() {
+  const A = S.A, D = S.D;
+  const num = (field, min, max, label) => {
+    const i = h('input', { type: 'number', inputmode: 'numeric', min, max, step: 1, value: A[field], 'aria-label': label });
+    i.addEventListener('input', () => { if (i.value === '') return; const v = Number(i.value); if (!Number.isNaN(v)) { A[field] = v; update(); } });
+    return i;
+  };
+  return sec('Credit and days off', `This month: ${D.crMin} to ${D.crMax} credit hours and ${D.offMin} to ${S.B._offMax} days off per line.`,
+    h('div', { class: 'row' }, h('span', { class: 'lbl', text: 'Credit' }), num('crMin', 0, 200, 'Credit from'), 'to', num('crMax', 0, 200, 'Credit to'), 'hours'),
+    h('div', { class: 'row' }, mustNice('crMode')),
+    h('div', { class: 'row' }, h('span', { class: 'lbl', text: 'Days off' }), 'at least', num('offMin', 0, 31, 'Minimum days off')),
+    h('div', { class: 'row' }, mustNice('offMode')));
+}
+function qCities() {
+  const A = S.A, cities = S.B._cities;
+  if (!cities.length) return sec('Layover cities', 'These lines have no layovers.');
+  const box = h('div', { class: 'chips' });
+  for (const c of cities) {
+    const b = h('button', { type: 'button', class: 'chip', text: c });
+    const paint = () => { const v = A.cities.get(c) || 0; b.dataset.s = v; b.setAttribute('aria-label', c + (v === 1 ? ', I like it' : v === 2 ? ', avoid' : '')); };
+    b.addEventListener('click', () => { const v = ((A.cities.get(c) || 0) + 1) % 3; if (v) A.cities.set(c, v); else A.cities.delete(c); paint(); update(); });
+    paint(); box.append(b);
+  }
+  return sec('Layover cities', null,
+    h('p', { class: 'help' }, 'Tap once for ', h('span', { class: 'k like', text: 'I like it' }), ', twice for ', h('span', { class: 'k avoid', text: 'avoid' }), ', three times to clear.'),
+    box, h('div', { class: 'sub' }, h('span', { class: 'lbl', text: 'Avoid is a' }), mustNice('avoidMode')));
+}
+function qTimes() {
+  const A = S.A;
+  const mk = (field, opts, label) => {
+    const s = h('select', { 'aria-label': label }, opts.map(([v, t]) => h('option', { value: String(v), text: t })));
+    s.value = String(A[field]); s.addEventListener('change', () => { A[field] = Number(s.value); update(); }); return s;
+  };
+  const rep = [[-1, 'Any time']].concat([240, 300, 360, 420, 480, 540, 600].map(m => [m, clockStr(m)]));
+  const home = [[-1, 'Any time']].concat([1020, 1080, 1140, 1200, 1260, 1320, 1380, 1439].map(m => [m, clockStr(m)]));
+  return sec('Report and release', 'Times at your base, as in the bid package.',
+    h('div', { class: 'row' }, h('span', { class: 'lbl', text: 'No report before' }), mk('rep', rep, 'No report before'), mustNice('repMode')),
+    h('div', { class: 'row' }, h('span', { class: 'lbl', text: 'Home by' }), mk('home', home, 'Home by'), mustNice('homeMode')));
+}
+function qAvoid() {
+  const A = S.A;
+  const items = [['redeye', 'Red-eyes (flying through the night)'], ['late', 'Getting home after midnight'], ['intl', 'Flying outside the U.S. (passport)'], ['dh', 'Deadheads']];
+  return sec('Things to avoid', null, items.map(([k, t]) => h('div', { class: 'arow' }, h('span', { text: t }),
+    seg([[0, 'OK'], [1, 'Prefer not'], [2, 'Never']], A.avoid[k], v => { A.avoid[k] = v; update(); }, t))));
+}
+function qCrew() {
+  const A = S.A;
+  return sec('Crew on the line', null, seg([[0, 'Any']].concat(S.B._crews.map(c => [c, crewText(c)])), A.crew, v => { A.crew = v; update(); }, 'Crew'));
+}
+function qTrades() {
+  const A = S.A;
+  const s = h('select', { id: 'qTrades', 'aria-label': 'Most days I am willing to trade' },
+    [[99, 'Any number'], [0, 'None'], [1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6'], [8, '8']].map(([v, t]) => h('option', { value: String(v), text: t })));
+  s.value = String(A.maxTrades); s.addEventListener('change', () => { A.maxTrades = Number(s.value); update(); });
+  return sec('Trades', 'If a must-be-off day is a reserve day, you trade it after the award. The trade limits are under the results.',
+    h('div', { class: 'row' }, h('span', { class: 'lbl', text: 'Most days I’m willing to trade' }), s));
+}
+function qList() {
+  const A = S.A, cb = h('input', { type: 'checkbox', id: 'qRest' });
+  cb.checked = A.addRest; cb.addEventListener('change', () => { A.addRest = cb.checked; update(); });
+  return sec('Your list', 'Lines are awarded by seniority. If every line on your list is taken, you get the first open line by number. Adding the other lines at the end avoids that.',
+    h('label', { class: 'check' }, cb, 'Add all other lines at the end of my list'));
+}
+let uT = 0;
+function update() {
+  clearTimeout(uT);
+  uT = setTimeout(() => {
+    const r = evaluate(); S.last = r;
+    const n = r.match.length, more = S.A.addRest ? r.rest.length : 0;
+    $('#count').textContent = n ? `${n} line${n > 1 ? 's' : ''} match` + (more ? `, ${more} more at the end` : '')
+      : more ? `No line meets every must. ${more} lines will be listed.` : 'No line meets every must. Change one to nice to have.';
+    $('#btnShowLines').disabled = n + more === 0;
+  }, 30);
+}
+
+// ------------------------------------------------------------ ranking
+const evaluate = () => S.kind === 'lines' ? evalLines() : evalReserve();
+function evalLines() {
+  const A = S.A, D = S.D, B = S.B;
+  const mustD = idx(1), niceD = idx(2), likes = [], avoids = [];
+  for (const [c, v] of A.cities) (v === 1 ? likes : avoids).push(c);
+  const lensCut = A.type !== 'turns' && B._lens.some(x => !A.lens.has(x));
+  const crUsed = A.crMin > D.crMin || A.crMax < D.crMax, offUsed = A.offMin > D.offMin;
+  const AV = [['redeye', 1, 'Red-eye'], ['late', 2, 'Home after midnight'], ['intl', 4, 'Outside the U.S.'], ['dh', 8, 'Deadhead']];
+  const out = [];
+  for (const L of B.lines) {
+    const r = { L, fails: [], failN: 0, hits: [], miss: [], nice: 0, likeN: 0 };
+    const crit = (ok, mode, bad, good) => {
+      if (mode === 'must') { if (!ok) { r.fails.push(bad); r.failN++; } }
+      else if (ok) { r.nice++; if (good) r.hits.push(good); } else r.miss.push(bad);
+    };
+    const wm = mustD.filter(d => L.busy[d]);
+    if (wm.length) { r.fails.push('Works ' + dayList(wm)); r.failN += wm.length; }
+    if (niceD.length) {
+      const off = niceD.filter(d => !L.busy[d]), wk = niceD.filter(d => L.busy[d]);
+      r.nice += off.length; if (off.length) r.hits.push('Off ' + dayList(off)); if (wk.length) r.miss.push('Works ' + dayList(wk));
+    }
+    if (A.first >= 0) crit(L.first === A.first, A.firstMode, 'Starts ' + dlab(L.first), 'Starts ' + dlab(A.first));
+    if (A.type === 'trips' && L.kind !== 'trips') { r.fails.push(L.kind === 'turns' ? 'Turns' : 'Has turns'); r.failN++; }
+    if (A.type === 'turns' && L.kind !== 'turns') { r.fails.push(L.kind === 'trips' ? 'Trips' : 'Has trips'); r.failN++; }
+    if (lensCut && L.nTrips) { const bad = [...L.lens].filter(x => !A.lens.has(x)); crit(!bad.length, A.lensMode, bad.map(x => x + '-day').join(', ') + ' trips', null); }
+    if (crUsed) crit(L.cr >= A.crMin * 60 && L.cr <= A.crMax * 60, A.crMode, 'Credit ' + durStr(L.cr), null);
+    if (offUsed) crit(L.off >= A.offMin, A.offMode, L.off + ' days off', null);
+    if (avoids.length) { const hit = avoids.filter(c => L.lay.has(c)); crit(!hit.length, A.avoidMode, 'Layover in ' + hit.join(', '), null); }
+    if (likes.length) {
+      const got = likes.filter(c => L.lay.has(c)); r.likeN = got.reduce((a, c) => a + L.lay.get(c), 0);
+      if (got.length) { r.nice++; r.hits.push(`${r.likeN} night${r.likeN > 1 ? 's' : ''} in ${got.join(', ')}`); } else r.miss.push('No liked layovers');
+    }
+    if (A.rep >= 0) crit(L.rpMin >= A.rep, A.repMode, 'Reports ' + clockStr(L.rpMin), null);
+    if (A.home >= 0) crit(!L.homeLate && L.relMax <= A.home, A.homeMode, L.homeLate ? 'Home after midnight' : 'Home ' + clockStr(L.relMax), null);
+    for (const [k, bit, t] of AV) {
+      const st = A.avoid[k]; if (!st) continue;
+      const has = k === 'dh' ? (L.dh > 0 || (L.flags & 8)) : (L.flags & bit);
+      crit(!has, st === 2 ? 'must' : 'nice', t + (k === 'intl' && has ? ' (' + [...L.intl].join(', ') + ')' : ''), null);
+    }
+    if (A.crew && L.c !== A.crew) { r.fails.push('Crew of ' + L.c); r.failN++; }
+    out.push(r);
+  }
+  const order = A.put === 'trips' ? { trips: 0, mix: 1, turns: 2 } : A.put === 'turns' ? { turns: 0, mix: 1, trips: 2 } : null;
+  const cmp = (a, b) => (order ? order[a.L.kind] - order[b.L.kind] : 0) || b.nice - a.nice || b.likeN - a.likeN || a.L.n - b.L.n;
+  return { match: out.filter(r => !r.failN).sort(cmp), rest: out.filter(r => r.failN).sort((a, b) => a.failN - b.failN || cmp(a, b)) };
+}
+// Fewest day-for-day trades so every must day is off. Limits: the line keeps its number of days off;
+// a block of reserve days inside the month stays at least 3 days long (unless it is unchanged from the line);
+// never more than 6 reserve days in a row. Tie-breaks: keep nice days off, keep gray Set days, fewer blocks.
+function tradePlan(n, off0, set0, must, nice) {
+  let K = 0; for (let i = 0; i < n; i++) K += off0[i];
+  const orig = new Set();
+  for (let i = 0; i < n;) { if (off0[i]) { i++; continue; } let j = i; while (j + 1 < n && !off0[j + 1]) j++; orig.add(i * 64 + j); i = j + 1; }
+  const NS = (K + 1) * 14, id = (k, r, e) => (k * 7 + r) * 2 + e;
+  let sc = new Float64Array(NS).fill(-Infinity); sc[id(0, 0, 0)] = 0;
+  const back = [];
+  for (let i = 0; i < n; i++) {
+    const nx = new Float64Array(NS).fill(-Infinity), bk = new Int32Array(NS).fill(-1);
+    for (let k = 0; k <= K; k++) for (let r = 0; r <= 6; r++) for (let e = 0; e < 2; e++) {
+      const from = id(k, r, e), s0 = sc[from];
+      if (s0 === -Infinity) continue;
+      if (k < K && !(r > 0 && !e && r < 3 && !orig.has((i - r) * 64 + (i - 1)))) {
+        const v = s0 + (off0[i] ? 1e6 : 0) + (nice[i] ? 1e4 : 0) + (set0[i] ? 1e2 : 0) - (i === 0 || r > 0 ? 1 : 0);
+        const to = id(k + 1, 0, 0);
+        if (v > nx[to]) { nx[to] = v; bk[to] = from * 2 + 1; }
+      }
+      if (!must[i] && r < 6) {
+        const to = id(k, r + 1, r === 0 ? (i === 0 ? 1 : 0) : e);
+        if (s0 > nx[to]) { nx[to] = s0; bk[to] = from * 2; }
+      }
+    }
+    sc = nx; back.push(bk);
+  }
+  let best = -Infinity, at = -1;
+  for (let r = 0; r <= 6; r++) for (let e = 0; e < 2; e++) { const v = sc[id(K, r, e)]; if (v > best) { best = v; at = id(K, r, e); } }
+  if (at < 0) return null;
+  const off = new Uint8Array(n);
+  for (let i = n - 1; i >= 0; i--) { const b = back[i][at]; off[i] = b & 1; at = b >> 1; }
+  const take = [], give = [];
+  for (let i = 0; i < n; i++) { if (off[i] && !off0[i]) take.push(i); if (!off[i] && off0[i]) give.push(i); }
+  return { trades: take.length, off, take, give, extra: take.filter(i => !must[i]) };
+}
+function evalReserve() {
+  const A = S.A, B = S.B, n = S.data.n;
+  const must = A.days.map(v => v === 1), nice = A.days.map(v => v === 2), mustI = idx(1), niceI = idx(2);
+  const out = [];
+  for (const R of B.reserve) {
+    const need = mustI.filter(i => !R.offA[i]);
+    const r = { R, plan: null, trades: 0, need, gray: mustI.filter(i => R.setA[i]).length, niceOff: niceI.filter(i => R.offA[i]).length, fails: [], failN: 0 };
+    if (need.length) {
+      r.plan = tradePlan(n, R.offA, R.setA, must, nice);
+      if (!r.plan) { r.trades = 99; r.fails.push('Can’t get all must days off within the trade limits'); r.failN = 99; }
+      else r.trades = r.plan.trades;
+    }
+    if (r.trades !== 99 && r.trades > A.maxTrades) { r.fails.push(`${r.trades} trades needed`); r.failN = r.trades - A.maxTrades; }
+    out.push(r);
+  }
+  const cmp = (a, b) => a.trades - b.trades || b.gray - a.gray || b.niceOff - a.niceOff || a.R.n - b.R.n;
+  return { match: out.filter(r => !r.failN).sort(cmp), rest: out.filter(r => r.failN).sort(cmp) };
+}
+
+// ------------------------------------------------------------ results
+function typeText(L) {
+  const lens = [...L.lens].sort((a, b) => a - b).join('/');
+  return L.kind === 'turns' ? 'Turns' : L.kind === 'trips' ? `Trips ${lens}-day` : `Trips ${lens}-day + turns`;
+}
+function flagsText(L) {
+  const a = [];
+  if (L.flags & 1) a.push('Red-eye');
+  if (L.flags & 2) a.push('Home after midnight');
+  if (L.intl.size) a.push('Passport: ' + [...L.intl].join(', '));
+  if (L.dh) a.push('Deadhead ' + durStr(L.dh));
+  if (L.co) a.push('Carry-over ' + durStr(L.co));
+  if (L.np) a.push('Night pay');
+  return a.join(', ');
+}
+function answersText() {
+  const A = S.A, D = S.D, p = [], m = idx(1), n = idx(2);
+  const md = x => x === 'must' ? 'must' : 'nice to have';
+  if (m.length) p.push('must be off ' + dayList(m));
+  if (n.length) p.push('nice to have off ' + dayList(n));
+  if (S.kind === 'lines') {
+    if (A.first >= 0) p.push(`first work day ${dlab(A.first)} (${md(A.firstMode)})`);
+    if (A.type !== 'both') p.push(A.type === 'trips' ? 'trips only' : 'turns only'); else if (A.put !== 'none') p.push(A.put + ' first');
+    const cut = S.B._lens.filter(x => !A.lens.has(x));
+    if (cut.length && A.type !== 'turns') p.push(`no ${cut.map(x => x + '-day').join(', ')} trips (${md(A.lensMode)})`);
+    if (A.crMin > D.crMin || A.crMax < D.crMax) p.push(`credit ${A.crMin} to ${A.crMax} hours (${md(A.crMode)})`);
+    if (A.offMin > D.offMin) p.push(`at least ${A.offMin} days off (${md(A.offMode)})`);
+    const likes = [...A.cities].filter(e => e[1] === 1).map(e => e[0]), avoids = [...A.cities].filter(e => e[1] === 2).map(e => e[0]);
+    if (likes.length) p.push('likes ' + likes.join(', '));
+    if (avoids.length) p.push(`avoid ${avoids.join(', ')} (${md(A.avoidMode)})`);
+    if (A.rep >= 0) p.push(`no report before ${clockStr(A.rep)} (${md(A.repMode)})`);
+    if (A.home >= 0) p.push(`home by ${clockStr(A.home)} (${md(A.homeMode)})`);
+    const AVT = { redeye: 'red-eyes', late: 'getting home after midnight', intl: 'flying outside the U.S.', dh: 'deadheads' };
+    for (const k in AVT) if (A.avoid[k]) p.push(`${A.avoid[k] === 2 ? 'never' : 'prefer no'} ${AVT[k]}`);
+    if (A.crew) p.push(crewText(A.crew) + ' lines');
+  } else p.push(A.maxTrades === 99 ? 'any number of trades' : `at most ${A.maxTrades} trade${A.maxTrades === 1 ? '' : 's'}`);
+  if (A.addRest) p.push('all other lines added at the end');
+  return p.length ? p.join('; ') + '.' : 'none, so every line is listed in bid package order.';
+}
+function sepRow(cols) { return h('tr', { class: 'sep' }, h('td', { colspan: cols, text: 'Other lines: they miss at least one must, so they come after your matches.' })); }
+function notesCell(r) {
+  const f = [];
+  r.fails.forEach(x => f.push(h('span', { class: 'bad', text: '✗ ' + x })));
+  r.hits.forEach(x => f.push(h('span', { class: 'ok', text: '✓ ' + x })));
+  r.miss.forEach(x => f.push(h('span', { class: 'miss', text: '✗ ' + x })));
+  const fl = flagsText(r.L); if (fl) f.push(h('span', { class: 'fl', text: fl }));
+  return h('td', { class: 'why' }, f);
+}
+function orderLines(list, nMatch) {
+  const tb = h('tbody');
+  list.forEach((r, k) => {
+    if (k === nMatch && k > 0) tb.append(sepRow(7));
+    const L = r.L;
+    tb.append(h('tr', {}, h('td', { class: 'c-n', text: k + 1 }), h('td', { class: 'c-l', text: L.n }), h('td', { text: typeText(L) }),
+      h('td', { class: 'num', text: durStr(L.cr) }), h('td', { class: 'num', text: L.off }), h('td', { class: 'num', text: dlab(L.first) }), notesCell(r)));
+  });
+  return h('table', { class: 'order' }, h('thead', {}, h('tr', {}, ['#', 'Line', 'Type', 'Credit', 'Off', 'Starts', 'Notes'].map(x => h('th', { text: x })))), tb);
+}
+function planText(r) {
+  if (r.failN === 99) return h('span', { class: 'bad', text: 'Can’t get all must days off within the trade limits.' });
+  if (!r.need.length) return h('span', { class: 'ok', text: 'Nothing to trade.' });
+  const p = r.plan, R = r.R, giveGray = p.give.filter(i => R.setA[i]);
+  const parts = ['Get ' + dayList(p.take.filter(i => !p.extra.includes(i))) + ' off'];
+  if (p.extra.length) parts.push('also ' + dayList(p.extra) + ' (trade limits)');
+  parts.push('give back ' + dayList(p.give) + (giveGray.length ? ' (gray: ' + dayList(giveGray) + ')' : ''));
+  return h('span', {}, parts.join('; ') + '.', r.fails.length ? h('span', { class: 'bad', text: ' ' + r.fails.join(', ') + '.' }) : null);
+}
+function orderReserve(list, nMatch) {
+  const mustI = idx(1), niceI = idx(2), tb = h('tbody');
+  list.forEach((r, k) => {
+    if (k === nMatch && k > 0) tb.append(sepRow(6));
+    const R = r.R, offM = mustI.filter(i => R.offA[i]), grayM = mustI.filter(i => R.setA[i]);
+    const mustTxt = !mustI.length ? '—' : offM.length ? dayList(offM) + (grayM.length ? ` (gray: ${dayList(grayM)})` : '') : 'none';
+    tb.append(h('tr', {}, h('td', { class: 'c-n', text: k + 1 }), h('td', { class: 'c-l', text: R.n }),
+      h('td', { class: 'num ' + (r.trades ? 'tr' : 'ok0'), text: r.trades === 99 ? '—' : r.trades }),
+      h('td', { text: mustTxt }), h('td', { class: 'num', text: niceI.length ? `${r.niceOff} of ${niceI.length}` : '—' }),
+      h('td', { class: 'why' }, planText(r))));
+  });
+  return h('table', { class: 'order' }, h('thead', {}, h('tr', {}, ['#', 'Line', 'Trades', 'Must days already off', 'Nice days off', 'How to get the must days off (one way)'].map(x => h('th', { text: x })))), tb);
+}
+function cellL(c, cls) {
+  const td = h('td', { class: cls });
+  if (!c) return td;
+  if (c.t === 'trip') {
+    td.classList.add('trip', c.pos); if (c.more) td.classList.add('more'); if (c.id) td.title = c.id;
+    td.append(h('span', { class: 'cb' }, h('span', { class: 'lab', text: c.lab }), c.time ? h('span', { class: 'tm', text: c.time }) : null));
+  } else if (c.t === 'turn') {
+    td.classList.add('turn'); td.title = c.id;
+    td.append(h('span', { class: 'cb' }, h('span', { class: 'lab', text: c.lab })));
+  } else if (c.t === 'spill') {
+    td.classList.add('spill');
+    td.append(h('span', { class: 'cb' }, h('span', { class: 'tm', text: c.time })));
+  }
+  if (c.spillIn) { td.classList.add('spillin'); td.title = (td.title ? td.title + ', ' : '') + 'previous duty ends ' + c.spillIn; }
+  return td;
+}
+function cellR(R, i, cls) {
+  const td = h('td', { class: cls });
+  if (R.setA[i]) { td.classList.add('set'); td.append(h('span', { class: 'cb' }, h('span', { class: 'lab', text: 'Set' }))); }
+  else if (!R.offA[i]) { td.classList.add(S.A.days[i] === 1 ? 'rt' : 'r'); td.append(h('span', { class: 'cb' }, h('span', { class: 'lab', text: 'R' }))); }
+  return td;
+}
+function gridTable(list) {
+  const n = S.data.n, A = S.A, isL = S.kind === 'lines', hol = new Set(S.B.holidays);
+  const colCls = i => (isWE(i) ? 'we' : '') + (A.days[i] === 1 ? ' cm' : A.days[i] === 2 ? ' cn' : '');
+  const hr = h('tr', {}, h('th', { class: 'c-n', text: '#' }), h('th', { class: 'c-l', text: 'Line' }), h('th', { class: 'c-i', text: isL ? 'Credit' : 'Trades' }));
+  for (let i = 0; i < n; i++) {
+    const d = dObj(i);
+    hr.append(h('th', { class: colCls(i) + (hol.has(i) ? ' hol' : ''), title: dlabW(i) + (hol.has(i) ? ', holiday' : '') },
+      h('span', { class: 'mo', text: i === 0 || d.getUTCDate() === 1 ? MON[d.getUTCMonth()] : '' }),
+      h('span', { class: 'dn', text: d.getUTCDate() }), h('span', { class: 'dw', text: 'SMTWTFS'[d.getUTCDay()] })));
+  }
+  const tb = h('tbody');
+  list.forEach((r, k) => {
+    const tr = h('tr', {}, h('td', { class: 'c-n', text: k + 1 }), h('td', { class: 'c-l', text: (r.L || r.R).n }),
+      h('td', { class: 'c-i num', text: isL ? durStr(r.L.cr) : r.trades === 99 ? '—' : r.trades }));
+    for (let i = 0; i < n; i++) tr.append(isL ? cellL(r.L.cells[i], colCls(i)) : cellR(r.R, i, colCls(i)));
+    tb.append(tr);
+  });
+  return h('table', { class: 'grid' }, h('thead', {}, hr), tb);
+}
+function legend() {
+  const isL = S.kind === 'lines';
+  const items = isL
+    ? [['trip', 'Trip: the city where a layover starts, the base on the last day, – when no layover starts that day'], ['turn', 'Turn: destination'],
+       ['spill', 'Release after midnight (time)'], ['cm', 'Must be off'], ['cn', 'Nice to have off'], ['we', 'Weekend']]
+    : [['r', 'R: reserve day'], ['rt', 'Reserve day on a must-be-off day (to trade)'], ['set', 'Set day off (gray in the bid package)'],
+       ['off', 'Day off'], ['cm', 'Must be off'], ['cn', 'Nice to have off']];
+  if (S.B.holidays.length) items.push(['hol', 'Holiday']);
+  return h('div', { class: 'legend' }, items.map(([k, t]) => h('span', { class: 'li' }, h('i', { class: 'sw ' + k }), t)));
+}
+function detailLine(r, pos) {
+  const L = r.L, P = S.B.pairings, n = S.data.n;
+  const d = h('details', { class: 'det' },
+    h('summary', {}, h('b', { text: `#${pos}  Line ${L.n}` }),
+      h('span', { class: 'meta', text: `${typeText(L)}, credit ${durStr(L.cr)}${L.co ? ' + ' + durStr(L.co) + ' carry-over' : ''}, ${L.off} days off, TAFB ${durStr(L.tf)}, ${crewText(L.c)}, bid package page ${L.pg}` })));
+  const fl = flagsText(L); if (fl) d.append(h('p', { class: 'flags', text: fl }));
+  const tb = h('tbody');
+  for (const [id, s] of L.p) {
+    const q = P[id], e = s + q.rd, endTxt = e < n ? dlab(e) : 'next month';
+    tb.append(h('tr', {}, h('td', { text: q.rd ? `${dlab(s)} – ${endTxt}` : dlab(s) }), h('td', { text: q.id }), h('td', { text: q.rp }),
+      h('td', { text: q.rd ? `${endTxt} ${q.rl}` : q.rl }), h('td', { class: 'num', text: durStr(q.cr) }), h('td', { text: q.rt.join(' / ') }),
+      h('td', { text: q.ly.map(([c, m]) => `${c} ${durStr(m)}`).join(', ') || '—' }), h('td', { class: 'num', text: q.pg })));
+  }
+  d.append(h('div', { class: 'scroll' }, h('table', { class: 'ptab' },
+    h('thead', {}, h('tr', {}, ['Dates', 'Pairing', 'Report', 'Release', 'Credit', 'Route (each duty day)', 'Layover and time on the ground', 'Page'].map(x => h('th', { text: x })))), tb)));
+  return d;
+}
+async function copyNums(ev) {
+  const t = S.list.map(r => (r.L || r.R).n).join(', '), b = ev.currentTarget;
+  try { await navigator.clipboard.writeText(t); const o = b.textContent; b.textContent = 'Copied'; setTimeout(() => { b.textContent = o; }, 1600); }
+  catch (e) { window.prompt('Copy the line numbers:', t); }
+}
+function renderResults() {
+  const A = S.A, r = evaluate(); S.last = r;
+  const list = A.addRest ? r.match.concat(r.rest) : r.match.slice(); S.list = list;
+  const isL = S.kind === 'lines', B = S.B, res = $('#resBody'); res.textContent = '';
+  const closed = Date.now() > Date.parse(B.close);
+  const printDet = h('input', { type: 'checkbox', id: 'printDet' }); printDet.checked = list.length <= 80;
+  res.append(
+    h('h1', { text: `${S.base} ${isL ? 'regular' : 'reserve'} lines, ${S.data.label}` }),
+    h('p', { class: 'lead', text: `${r.match.length} line${r.match.length === 1 ? '' : 's'} match` + (A.addRest && r.rest.length ? `, then ${r.rest.length} more at the end` : '') + '. Enter them in your bid in this order.' }),
+    h('p', { class: 'closeinfo', text: `Bid closes ${B.closeText} ${S.base} time.` + (closed ? ' This bid has closed, so this list is for practice.' : '') }),
+    h('div', { class: 'tools' },
+      h('button', { type: 'button', class: 'ghost', text: 'Change answers', onclick: () => { show('s-ask'); update(); } }),
+      h('button', { type: 'button', class: 'ghost', text: 'Copy line numbers', onclick: copyNums }),
+      h('button', { type: 'button', class: 'primary', text: 'Print or save PDF', onclick: () => window.print() }),
+      isL ? h('label', { class: 'check' }, printDet, 'Print line details') : null),
+    h('p', { class: 'answers' }, h('b', { text: 'Your answers: ' }), answersText()),
+    h('h2', { text: 'Bid order' }),
+    h('div', { class: 'scroll' }, isL ? orderLines(list, r.match.length) : orderReserve(list, r.match.length)),
+    h('h2', { class: list.length > 14 ? 'pb' : null, text: 'Month at a glance' }),
+    h('div', { class: 'scroll' }, gridTable(list)),
+    legend(),
+    isL ? h('h2', { class: 'dh pb', text: 'Line details' }) : h('h2', { text: 'Trade limits used' }),
+    isL ? h('div', { class: 'dets' }, list.map((x, k) => detailLine(x, k + 1)))
+      : h('div', { class: 'notes' },
+        h('p', { text: 'Each plan keeps the line’s 12 days off, keeps every block of reserve days inside the month at least 3 days long, and never puts more than 6 reserve days in a row (contract 8.I.1, 8.I.2, 8.J.1). You can choose other days to give back.' }),
+        h('p', { text: 'Gray Set days can’t be assigned. A gray day you give back is no longer Set, unless it ends up at the end of a gray block (8.I.1.e).' }),
+        h('p', { text: 'Trades depend on reserve coverage, so they are not guaranteed (8.J.1.d).' })),
+    h('p', { class: 'foot', text: `Made from the ${S.data.label} bid package. Check your final list against the bid package before you submit.` }));
+  show('s-res');
+}
+
+// ------------------------------------------------------------ print
+function preparePrint() {
+  const cb = $('#printDet'), on = !!(cb && cb.checked);
+  document.body.classList.toggle('nodet', !on);
+  if (on) $$('details.det').forEach(d => { d.dataset.was = d.open ? '1' : '0'; d.open = true; });
+}
+function afterPrint() { $$('details.det').forEach(d => { if (d.dataset.was) { d.open = d.dataset.was === '1'; delete d.dataset.was; } }); }
+window.addEventListener('beforeprint', preparePrint);
+window.addEventListener('afterprint', afterPrint);
+window.__lp = { S, preparePrint };
+
+boot();
+})();
+</script>
+</body>
+</html>

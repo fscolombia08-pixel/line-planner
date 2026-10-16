@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+<title>Line Planner setup</title>
+<style>
+:root{--ink:#16202f;--muted:#66738a;--rule:#d7dfe9;--paper:#f3f6fa;--card:#fff;--accent:#1f5e99;--accent-ink:#fff;--good:#2c7a44;--bad:#b42318;
+  --ui:"Avenir Next","Avenir","Segoe UI","Roboto",system-ui,-apple-system,sans-serif;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--ink:#e6ecf5;--muted:#8d9ab0;--rule:#2b374a;--paper:#0d1421;--card:#141e2f;--accent:#6fa9e6;--accent-ink:#0d1421;--good:#5cb57a;--bad:#f06e66;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.5}
+main{max-width:640px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:27px;margin:0 0 8px}
+.lead{color:var(--muted);margin:0 0 16px}
+ol{padding-left:22px;margin:0 0 18px}li{margin:4px 0}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:16px;margin:14px 0}
+label{display:block;font-weight:600;margin:10px 0 6px}
+input{width:100%;font:inherit;font-size:18px;padding:10px 12px;border:1px solid var(--rule);border-radius:9px;background:var(--card);color:var(--ink);letter-spacing:.02em}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button{font:inherit;cursor:pointer;border-radius:10px;padding:11px 16px;min-height:44px}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;font-weight:650}
+.primary:disabled{opacity:.45;cursor:default}
+.ghost{background:var(--card);color:var(--ink);border:1px solid var(--rule)}
+.msg{font-weight:600;min-height:1.5em;margin:12px 0 0}
+.ok{color:var(--good)}.bad{color:var(--bad)}
+.done{display:none}.done.on{display:block}
+code{font-size:15px;background:var(--paper);padding:1px 5px;border-radius:5px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Create the access code</h1>
+  <p class="lead">You do this once. Everything happens on this computer. Nothing is sent anywhere.</p>
+  <ol>
+    <li>Press <b>Suggest a code</b>, or type your own code of four or more words.</li>
+    <li>Write the code on paper. Type it again below.</li>
+    <li>Press <b>Create key.json</b>. Your browser downloads the file.</li>
+  </ol>
+  <div class="card">
+    <label for="c1">Access code</label>
+    <input id="c1" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="four words">
+    <div class="row"><button type="button" class="ghost" id="sug">Suggest a code</button></div>
+    <label for="c2">Type it again</label>
+    <input id="c2" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <p class="msg" id="msg" aria-live="polite"></p>
+    <button type="button" class="primary" id="make" disabled>Create key.json</button>
+  </div>
+  <div class="card done" id="done">
+    <p class="msg ok" id="doneMsg"></p>
+    <ol>
+      <li>Upload <code>key.json</code> to the site’s GitHub repository.</li>
+      <li>Send the same <code>key.json</code> to Claude, so it can lock the month file. Never send the code.</li>
+      <li>Share the code only in person or by phone. Close this page.</li>
+    </ol>
+    <p class="lead">Capital letters and extra spaces don’t matter when they type it.</p>
+  </div>
+</main>
+<script>
+'use strict';
+(() => {
+const WORDS = [...new Set(`acorn alpine amber anchor ant anvil apple apricot apron arch arrow aspen atlas atom attic autumn avocado badge
+bagel bakery ball balloon bamboo banana banjo banner barley barn barrel basil basket bay beach bead beam bean bear beaver bee beet bell
+bench berry bicycle birch bird biscuit bison blanket blaze bloom blossom blue boat bonfire book boot bottle boulder bowl box brass bread
+breeze brick bridge brook broom brush bucket buffalo bugle bunny butter button cabin cable cactus cake camel camera canal candle candy
+canoe canvas canyon cape caramel card carpet carrot cart castle cave cedar celery cello chalk chapel cheese cherry chess chestnut chime
+circle citrus city clay cliff clock cloud clover coal coast cobalt cocoa coconut coffee coin comet compass cookie copper coral cotton
+cougar cove crab crane crayon cream creek cricket crown crystal cube cup curry cushion cypress daisy dawn deer delta desert dew diamond
+dolphin domino donkey door dove dragon drum duck dune eagle earth easel echo elbow elk elm ember emerald engine falcon fable fan farm
+feather fern ferry fiddle field fig finch fire fjord flag flame flannel flute foam forest fork fossil fountain fox frame frost fudge galaxy
+garden garlic gazelle gecko gem ginger giraffe glacier glove goat gold goose gorilla grape grass gravel grove guitar gull hammock hamster
+harbor harp hawk hazel heron hill hippo honey hoop horizon horse husky iceberg igloo indigo iris island ivory ivy jacket jade jaguar
+jasmine jelly jungle juniper kale kayak kettle kite kiwi koala ladder lagoon lake lamp lantern lark latte lava lemon lemur lens lentil
+lettuce lily lime linen lion llama lobster locket lotus lynx magnet mango maple marble marsh meadow melon meteor mint mirror mitten mocha
+mole moose moss moth mountain muffin mural mustard nectar needle nest nickel noodle nutmeg oak oasis oat ocean olive onion opal orange
+orbit orchid otter owl oyster paddle palm panda papaya paper parade parrot parsley pasta peach peanut pear pebble pecan pelican pencil
+penguin pepper piano pickle pigeon pillow pine pizza planet plum pond pony poppy potato prairie prism puffin pumpkin puzzle quail quartz
+quilt rabbit raccoon radish rain rainbow raisin raven reef rhino ribbon rice ridge river robin rocket rose ruby saddle saffron sage
+salmon sand satin scarf seal sesame shell shore silk silver sketch sled sloth snow sofa sparrow spice spider spinach sponge spruce squid
+stamp star stone stork straw stream sugar summit sun swan sweater syrup taco tango teal teapot tent thistle thunder tiger timber toast
+tomato topaz tortoise towel tower trail trout tulip tuna turkey turnip turtle tuxedo umbrella valley vanilla velvet violet violin volcano
+waffle wagon walnut walrus water wave whale wheat whistle willow window wolf wombat wool yak yarn yogurt zebra zinc acrobat almond alto
+anthem archer armchair aurora avenue axle ballet bandana barber beacon beetle beret blender bobcat bonnet bracelet bronze bubble buckle
+burrito cabbage cadet camper canary caravan cardinal carnival cashew catfish cavern chalet charcoal cheetah chili chimney chipmunk cider
+cinnamon cobbler condor cornet cowboy coyote crocus cucumber cupcake custard dahlia dancer denim dessert dinner diver doodle dumpling
+eclipse eggplant elephant envelope falafel fawn ferret festival firefly flamingo florist folder fortune freckle gadget gallery garnet
+gingham glider goblet gondola granite guppy hazelnut hedgehog helmet honeybee hotel iguana inkwell jackal javelin journal jukebox
+kitten lasagna lavender library lollipop lumber macaw mailbox mandolin marigold marmot meringue minnow mongoose monsoon mosaic mouse
+museum nachos napkin narwhal nomad notebook octopus omelet ostrich pajamas pancake panther parasol parka pastry peacock petal pinecone
+pinwheel platypus plaza pocket polka popcorn postcard pottery pretzel radio raindrop recipe reindeer rhubarb rooster rosemary sailboat
+salsa sandal sardine satchel scallop scooter seagull seahorse sequoia shamrock sherbet skate skylark slipper snail sombrero sonnet
+spatula sprinkle squirrel stadium starfish stingray strudel sundae tadpole tangerine thimble tinsel toaster toucan tractor trellis
+trombone trumpet tugboat unicorn urchin vineyard warbler weasel windmill wizard zucchini`.split(/\s+/).filter(w => /^[a-z]{3,8}$/.test(w)))];
+const ITER = 600000;
+const $ = s => document.querySelector(s);
+const norm = s => s.trim().toLowerCase().replace(/\s+/g, ' ');
+const b64 = u8 => { let s = ''; for (const c of u8) s += String.fromCharCode(c); return btoa(s); };
+const hex = u8 => Array.from(u8, b => b.toString(16).padStart(2, '0')).join('');
+function rnd(n) { const lim = Math.floor(2 ** 32 / n) * n, a = new Uint32Array(1); for (;;) { crypto.getRandomValues(a); if (a[0] < lim) return a[0] % n; } }
+function check() {
+  const a = norm($('#c1').value), b = norm($('#c2').value), words = a ? a.split(' ').length : 0, m = $('#msg');
+  let ok = false;
+  if (!a) m.textContent = '';
+  else if (words < 4 || a.length < 16) { m.textContent = 'Too short: use four or more words (16 letters or more).'; m.className = 'msg bad'; }
+  else if (!b) { m.textContent = 'Good code. Write it on paper, then type it again.'; m.className = 'msg ok'; }
+  else if (a !== b) { m.textContent = 'The two codes are not the same.'; m.className = 'msg bad'; }
+  else { m.textContent = 'Both codes match.'; m.className = 'msg ok'; ok = true; }
+  $('#make').disabled = !ok;
+}
+$('#c1').addEventListener('input', check);
+$('#c2').addEventListener('input', check);
+$('#sug').addEventListener('click', () => {
+  const w = []; while (w.length < 4) { const x = WORDS[rnd(WORDS.length)]; if (!w.includes(x)) w.push(x); }
+  $('#c1').value = w.join(' '); $('#c2').value = ''; check(); $('#c2').focus();
+});
+$('#make').addEventListener('click', async () => {
+  const btn = $('#make'), m = $('#msg'), code = norm($('#c1').value);
+  btn.disabled = true; m.className = 'msg'; m.textContent = 'Creating the key. This takes a few seconds…';
+  try {
+    const enc = new TextEncoder();
+    const kp = await crypto.subtle.generateKey({ name: 'RSA-OAEP', modulusLength: 3072, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['encrypt', 'decrypt']);
+    const spki = new Uint8Array(await crypto.subtle.exportKey('spki', kp.publicKey));
+    const pkcs8 = new Uint8Array(await crypto.subtle.exportKey('pkcs8', kp.privateKey));
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const base = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+    const kek = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: ITER }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    const wrapped = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, pkcs8));
+    const kid = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', spki))).slice(0, 16);
+    // self-test: the code opens the key, and the key opens something locked with the padlock
+    const back = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, kek, wrapped);
+    const priv = await crypto.subtle.importKey('pkcs8', back, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt']);
+    const probe = crypto.getRandomValues(new Uint8Array(32));
+    const ct = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, kp.publicKey, probe);
+    const pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, priv, ct));
+    if (hex(pt) !== hex(probe)) throw new Error('self-test failed');
+    const K = { v: 1, kid, padlock: b64(spki), kdf: { name: 'PBKDF2', hash: 'SHA-256', iter: ITER, salt: b64(salt) },
+      iv: b64(iv), key: b64(wrapped), created: new Date().toISOString().slice(0, 10) };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(K, null, 1)], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'key.json'; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    $('#c1').value = ''; $('#c2').value = ''; m.textContent = '';
+    $('#doneMsg').textContent = `key.json is downloaded (key ID ${kid}). The code opens it: checked.`;
+    $('#done').classList.add('on');
+  } catch (e) {
+    m.className = 'msg bad'; m.textContent = 'This browser could not create the key. Use a current Chrome, Edge or Safari on a computer.';
+    btn.disabled = false;
+  }
+});
+if (!window.crypto || !crypto.subtle) { $('#msg').className = 'msg bad'; $('#msg').textContent = 'Open this page from the site’s https link in a current browser.'; $('#sug').disabled = true; }
+window.__words = WORDS.length;
+})();
+</script>
+</body>
+</html>
